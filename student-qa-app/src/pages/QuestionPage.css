@@ -1,0 +1,20 @@
+.question-page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.question-container {
+  width: 100%;
+  max-width: 700px;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .question-page {
+    padding: 1rem;
+  }
+}

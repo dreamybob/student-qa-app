@@ -1,0 +1,17 @@
+.dashboard-page {
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+/* Page-level responsive adjustments */
+@media (max-width: 768px) {
+  .dashboard-page {
+    padding: 0;
+  }
+}
+
+@media (min-width: 1200px) {
+  .dashboard-page {
+    padding: 0 20px;
+  }
+}
