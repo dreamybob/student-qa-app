@@ -91,30 +91,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
     }
   };
 
-  const handleCompleteSignup = async () => {
-    if (!formData.fullName.trim()) {
-      setMessage({ type: 'error', text: 'Please enter your full name' });
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-
-    try {
-      const result = await authService.verifyOTPAndSignup(formData);
-      
-      if (result.success && result.user) {
-        setMessage({ type: 'success', text: result.message });
-        onSignupSuccess(result.user);
-      } else {
-        setMessage({ type: 'error', text: result.message });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to complete signup. Please try again.' });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed unused handleCompleteSignup function
 
   const handleResendOTP = () => {
     setStep('details');
