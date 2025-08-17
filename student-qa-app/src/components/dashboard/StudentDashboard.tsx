@@ -7,31 +7,36 @@ import './StudentDashboard.css';
 interface StudentDashboardProps {
   user: User;
   onLogout: () => void;
+  refreshTrigger?: boolean;
 }
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) => {
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout, refreshTrigger }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<Question['status'] | 'all'>('all');
-  const [subjectFilter, setSubjectFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'date' | 'subject' | 'difficulty'>('date');
   const navigate = useNavigate();
 
   useEffect(() => {
     loadUserQuestions();
   }, [user.id]);
 
+  // Refresh questions when refreshTrigger changes (new question submitted)
+  useEffect(() => {
+    if (refreshTrigger) {
+      loadUserQuestions();
+    }
+  }, [refreshTrigger]);
+
   const loadUserQuestions = async () => {
     try {
+      console.log('StudentDashboard: Loading questions for user:', user.id);
       setLoading(true);
       const userQuestions = await questionService.getQuestionsByUserId(user.id);
+      console.log('StudentDashboard: Received questions:', userQuestions);
       setQuestions(userQuestions);
     } catch (err) {
-      setError('Failed to load your questions. Please try again.');
       console.error('Error loading questions:', err);
+      setError('Failed to load your questions. Please try again.');
     } finally {
       setLoading(false);
     }

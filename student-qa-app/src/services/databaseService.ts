@@ -51,6 +51,18 @@ export class DatabaseService {
   }
 
   /**
+   * Get all users
+   */
+  async getAllUsers(): Promise<User[]> {
+    try {
+      return await db.users.toArray();
+    } catch (error) {
+      console.error('Failed to get all users:', error);
+      throw new Error('Failed to get all users');
+    }
+  }
+
+  /**
    * Update user
    */
   async updateUser(userId: string, updates: Partial<Pick<User, 'fullName' | 'mobileNumber'>>): Promise<boolean> {
@@ -200,6 +212,44 @@ export class DatabaseService {
     } catch (error) {
       console.error('Failed to delete question:', error);
       throw new Error('Failed to delete question');
+    }
+  }
+
+  /**
+   * Get all questions
+   */
+  async getAllQuestions(): Promise<Question[]> {
+    try {
+      return await db.questions.toArray();
+    } catch (error) {
+      console.error('Failed to get all questions:', error);
+      throw new Error('Failed to get all questions');
+    }
+  }
+
+  /**
+   * Update question
+   */
+  async updateQuestion(question: Question): Promise<boolean> {
+    try {
+      const updatedCount = await db.questions
+        .where('id')
+        .equals(question.id)
+        .modify({
+          questionText: question.questionText,
+          subject: question.subject,
+          topic: question.topic,
+          difficultyLevel: question.difficultyLevel,
+          gradeLevel: question.gradeLevel,
+          status: question.status,
+          answer: question.answer,
+          updatedAt: new Date(),
+        });
+      
+      return updatedCount > 0;
+    } catch (error) {
+      console.error('Failed to update question:', error);
+      throw new Error('Failed to update question');
     }
   }
 

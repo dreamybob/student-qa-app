@@ -128,4 +128,84 @@ describe('SignupForm', () => {
       expect(screen.getByText('Complete Your Profile')).toBeInTheDocument();
     });
   });
+
+  it('allows editing phone number from OTP step', async () => {
+    const { authService } = await import('../../services/authService');
+    vi.mocked(authService.sendOTP).mockResolvedValue({
+      success: true,
+      message: 'OTP sent successfully to your mobile number',
+    });
+
+    render(<SignupForm onSignupSuccess={mockOnSignupSuccess} />);
+    
+    // Enter mobile number and go to OTP step
+    const mobileInput = screen.getByPlaceholderText('Enter 10-digit mobile number');
+    fireEvent.change(mobileInput, { target: { value: '9876543210' } });
+    
+    const sendOTPButton = screen.getByText('Send OTP');
+    fireEvent.click(sendOTPButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Enter Verification Code')).toBeInTheDocument();
+    });
+
+    // Click edit phone button
+    const editPhoneButton = screen.getByTitle('Edit phone number');
+    fireEvent.click(editPhoneButton);
+
+    // Should go back to mobile step
+    await waitFor(() => {
+      expect(screen.getByText('Enter Your Mobile Number')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter 10-digit mobile number')).toHaveValue('9876543210');
+    });
+  });
+
+  it('allows editing phone number from name step', async () => {
+    const { authService } = await import('../../services/authService');
+    
+    // Mock sendOTP
+    vi.mocked(authService.sendOTP).mockResolvedValue({
+      success: true,
+      message: 'OTP sent successfully to your mobile number',
+    });
+    
+    // Mock verifyOTP
+    vi.mocked(authService.verifyOTP).mockResolvedValue({
+      success: true,
+      message: 'OTP verified successfully! Please enter your name.',
+    });
+
+    render(<SignupForm onSignupSuccess={mockOnSignupSuccess} />);
+    
+    // Go through the flow to name step
+    const mobileInput = screen.getByPlaceholderText('Enter 10-digit mobile number');
+    fireEvent.change(mobileInput, { target: { value: '9876543210' } });
+    
+    const sendOTPButton = screen.getByText('Send OTP');
+    fireEvent.click(sendOTPButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Enter Verification Code')).toBeInTheDocument();
+    });
+
+    const otpInput = screen.getByPlaceholderText('Enter 6-digit OTP');
+    fireEvent.change(otpInput, { target: { value: '123456' } });
+    
+    const verifyOTPButton = screen.getByText('Verify OTP');
+    fireEvent.click(verifyOTPButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText('Complete Your Profile')).toBeInTheDocument();
+    });
+
+    // Click edit phone button from name step
+    const editPhoneButton = screen.getByTitle('Edit phone number');
+    fireEvent.click(editPhoneButton);
+
+    // Should go back to mobile step
+    await waitFor(() => {
+      expect(screen.getByText('Enter Your Mobile Number')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter 10-digit mobile number')).toHaveValue('9876543210');
+    });
+  });
 });

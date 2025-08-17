@@ -1,42 +1,28 @@
 import { useState } from 'react';
-import type { SignupFormData } from '../../types';
 import { authService } from '../../services/authService';
-import './SignupForm.css';
+import './LoginForm.css';
 
-interface SignupFormProps {
-  onSignupSuccess: (user: any) => void;
+interface LoginFormProps {
+  onLoginSuccess: (user: any) => void;
+  onSwitchToSignup: () => void;
 }
 
-const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
-  const [formData, setFormData] = useState<SignupFormData>({
-    fullName: '',
-    mobileNumber: '',
-    otp: '',
-  });
-
-  const [step, setStep] = useState<'details' | 'otp'>('details');
+const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
+  const [mobileNumber, setMobileNumber] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState<'mobile' | 'otp'>('mobile');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
   const handleSendOTP = async () => {
-    if (!formData.mobileNumber.trim()) {
+    if (!mobileNumber.trim()) {
       setMessage({ type: 'error', text: 'Please enter your mobile number' });
-      return;
-    }
-
-    if (!formData.fullName.trim()) {
-      setMessage({ type: 'error', text: 'Please enter your full name' });
       return;
     }
 
     // Validate Indian mobile number format
     const mobileRegex = /^[6-9]\d{9}$/;
-    if (!mobileRegex.test(formData.mobileNumber)) {
+    if (!mobileRegex.test(mobileNumber)) {
       setMessage({ type: 'error', text: 'Please enter a valid Indian mobile number (10 digits starting with 6-9)' });
       return;
     }
@@ -45,7 +31,7 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
     setMessage(null);
 
     try {
-      const result = await authService.sendOTP(formData.mobileNumber);
+      const result = await authService.sendOTP(mobileNumber);
       
       if (result.success) {
         setMessage({ type: 'success', text: result.message });
@@ -61,12 +47,12 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   };
 
   const handleVerifyOTP = async () => {
-    if (!formData.otp.trim()) {
+    if (!otp.trim()) {
       setMessage({ type: 'error', text: 'Please enter the OTP' });
       return;
     }
 
-    if (formData.otp.length !== 6) {
+    if (otp.length !== 6) {
       setMessage({ type: 'error', text: 'OTP must be 6 digits' });
       return;
     }
@@ -75,12 +61,18 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
     setMessage(null);
 
     try {
-      // Verify OTP and create user account in one step
-      const result = await authService.verifyOTPAndSignup(formData);
+      // Verify OTP with Supabase
+      const result = await authService.verifyOTP(mobileNumber, otp);
       
-      if (result.success && result.user) {
-        setMessage({ type: 'success', text: result.message });
-        onSignupSuccess(result.user);
+      if (result.success) {
+        // Get the current user from Supabase session
+        const user = await authService.getCurrentUser();
+        if (user) {
+          setMessage({ type: 'success', text: 'Login successful!' });
+          onLoginSuccess(user);
+        } else {
+          setMessage({ type: 'error', text: 'Login successful but failed to retrieve user data.' });
+        }
       } else {
         setMessage({ type: 'error', text: result.message });
       }
@@ -91,56 +83,30 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
     }
   };
 
-  const handleCompleteSignup = async () => {
-    if (!formData.fullName.trim()) {
-      setMessage({ type: 'error', text: 'Please enter your full name' });
-      return;
-    }
-
-    setLoading(true);
-    setMessage(null);
-
-    try {
-      const result = await authService.verifyOTPAndSignup(formData);
-      
-      if (result.success && result.user) {
-        setMessage({ type: 'success', text: result.message });
-        onSignupSuccess(result.user);
-      } else {
-        setMessage({ type: 'error', text: result.message });
-      }
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to complete signup. Please try again.' });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleResendOTP = () => {
-    setStep('details');
-    setFormData(prev => ({ ...prev, otp: '' }));
+    setStep('mobile');
+    setOtp('');
     setMessage(null);
   };
 
   const handleEditPhoneNumber = () => {
-    setStep('details');
-    setFormData(prev => ({ ...prev, otp: '', fullName: '' }));
+    setStep('mobile');
+    setOtp('');
     setMessage(null);
   };
 
-  const renderDetailsStep = () => (
-    <div className="signup-step">
-      <h2>Enter Your Details</h2>
-      <p>We'll send you a verification code</p>
+  const renderMobileStep = () => (
+    <div className="login-step">
+      <h2>Login to Your Account</h2>
+      <p>Enter your mobile number to receive a verification code</p>
       
       <div className="form-group">
         <label htmlFor="mobileNumber">Mobile Number</label>
         <input
           type="tel"
           id="mobileNumber"
-          name="mobileNumber"
-          value={formData.mobileNumber}
-          onChange={handleInputChange}
+          value={mobileNumber}
+          onChange={(e) => setMobileNumber(e.target.value)}
           placeholder="Enter 10-digit mobile number"
           maxLength={10}
           disabled={loading}
@@ -148,24 +114,10 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         <small>Enter your 10-digit Indian mobile number</small>
       </div>
 
-      <div className="form-group">
-        <label htmlFor="fullName">Full Name</label>
-        <input
-          type="text"
-          id="fullName"
-          name="fullName"
-          value={formData.fullName}
-          onChange={handleInputChange}
-          placeholder="Enter your full name"
-          disabled={loading}
-        />
-        <small>Enter your complete name as it appears on official documents</small>
-      </div>
-
       <button
         type="button"
         onClick={handleSendOTP}
-        disabled={loading || !formData.mobileNumber.trim() || !formData.fullName.trim()}
+        disabled={loading || !mobileNumber.trim()}
         className="btn-primary"
       >
         {loading ? 'Sending...' : 'Send OTP'}
@@ -174,12 +126,12 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   );
 
   const renderOTPStep = () => (
-    <div className="signup-step">
+    <div className="login-step">
       <h2>Enter Verification Code</h2>
       <div className="phone-display">
         <p>We've sent a 6-digit code to</p>
         <div className="phone-number-with-edit">
-          <span className="phone-number">{formData.mobileNumber}</span>
+          <span className="phone-number">{mobileNumber}</span>
           <button
             type="button"
             onClick={handleEditPhoneNumber}
@@ -193,7 +145,6 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
             </svg>
           </button>
         </div>
-        <p>for <strong>{formData.fullName}</strong></p>
       </div>
       
       <div className="form-group">
@@ -201,9 +152,8 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         <input
           type="text"
           id="otp"
-          name="otp"
-          value={formData.otp}
-          onChange={handleInputChange}
+          value={otp}
+          onChange={(e) => setOtp(e.target.value)}
           placeholder="Enter 6-digit OTP"
           maxLength={6}
           disabled={loading}
@@ -215,10 +165,10 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
         <button
           type="button"
           onClick={handleVerifyOTP}
-          disabled={loading || formData.otp.length !== 6}
+          disabled={loading || otp.length !== 6}
           className="btn-primary"
         >
-          {loading ? 'Verifying...' : 'Verify OTP'}
+          {loading ? 'Verifying...' : 'Login'}
         </button>
         <button
           type="button"
@@ -233,17 +183,21 @@ const SignupForm: React.FC<SignupFormProps> = ({ onSignupSuccess }) => {
   );
 
   return (
-    <div className="signup-form">
+    <div className="login-form">
       {message && (
         <div className={`message ${message.type}`}>
           {message.text}
         </div>
       )}
 
-      {step === 'details' && renderDetailsStep()}
+      {step === 'mobile' && renderMobileStep()}
       {step === 'otp' && renderOTPStep()}
+
+      <div className="login-footer">
+        <p>Don't have an account? <button type="button" onClick={onSwitchToSignup} className="link-button">Sign up</button></p>
+      </div>
     </div>
   );
 };
 
-export default SignupForm;
+export default LoginForm;

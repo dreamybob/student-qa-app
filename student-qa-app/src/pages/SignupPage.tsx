@@ -4,9 +4,10 @@ import './SignupPage.css';
 
 interface SignupPageProps {
   onSignupSuccess: (user: User) => void;
+  onSwitchToLogin: () => void;
 }
 
-const SignupPage: React.FC<SignupPageProps> = ({ onSignupSuccess }) => {
+const SignupPage: React.FC<SignupPageProps> = ({ onSignupSuccess, onSwitchToLogin }) => {
   return (
     <div className="signup-page">
       <div className="signup-container">
@@ -18,6 +19,7 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignupSuccess }) => {
         <SignupForm onSignupSuccess={onSignupSuccess} />
         
         <div className="signup-footer">
+          <p>Already have an account? <button type="button" onClick={onSwitchToLogin} className="link-button">Login</button></p>
           <p>By signing up, you agree to our Terms of Service and Privacy Policy</p>
         </div>
       </div>

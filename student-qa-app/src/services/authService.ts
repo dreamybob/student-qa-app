@@ -1,16 +1,9 @@
 import type { User, SignupFormData } from '../types';
+import { supabaseService } from './supabaseService';
 
-// Mock OTP service - in production, this would integrate with SMS service
+// Auth service using Supabase
 class AuthService {
-  private users: User[] = [];
-  private otpStore: Map<string, { otp: string; expiresAt: number }> = new Map();
-
-  // Generate a 6-digit OTP
-  private generateOTP(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-  }
-
-  // Send OTP to mobile number (mock implementation)
+  // Send OTP to mobile number
   async sendOTP(mobileNumber: string): Promise<{ success: boolean; message: string }> {
     try {
       // Validate Indian mobile number format
@@ -22,20 +15,13 @@ class AuthService {
         };
       }
 
-      // Generate OTP
-      const otp = this.generateOTP();
-      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes expiry
+      // Format phone number for Supabase
+      const formattedPhone = this.formatPhoneNumber(mobileNumber);
 
-      // Store OTP
-      this.otpStore.set(mobileNumber, { otp, expiresAt });
-
-      // In production, send SMS here
-      console.log(`OTP sent to ${mobileNumber}: ${otp}`);
-
-      return {
-        success: true,
-        message: 'OTP sent successfully to your mobile number',
-      };
+      // Send OTP via Supabase
+      const result = await supabaseService.signUpWithPhone(formattedPhone, 'User');
+      
+      return result;
     } catch (error) {
       return {
         success: false,
@@ -45,39 +31,25 @@ class AuthService {
   }
 
   // Verify OTP only (without creating user)
-  async verifyOTP(mobileNumber: string, otp: string): Promise<{ success: boolean; message: string }> {
+  async verifyOTP(mobileNumber: string, otp: string, fullName?: string): Promise<{ success: boolean; message: string }> {
     try {
-      // Check if OTP exists and is valid
-      const storedOTPData = this.otpStore.get(mobileNumber);
-      if (!storedOTPData) {
+      // Format phone number for lookup
+      const formattedPhone = this.formatPhoneNumber(mobileNumber);
+      
+      // Verify OTP with Supabase
+      const result = await supabaseService.verifyOTP(formattedPhone, otp, fullName);
+      
+      if (result.success) {
+        return {
+          success: true,
+          message: 'OTP verified successfully!',
+        };
+      } else {
         return {
           success: false,
-          message: 'OTP not found. Please request a new OTP.',
+          message: result.message,
         };
       }
-
-      // Check if OTP has expired
-      if (Date.now() > storedOTPData.expiresAt) {
-        this.otpStore.delete(mobileNumber);
-        return {
-          success: false,
-          message: 'OTP has expired. Please request a new OTP.',
-        };
-      }
-
-      // Verify OTP
-      if (storedOTPData.otp !== otp) {
-        return {
-          success: false,
-          message: 'Invalid OTP. Please check and try again.',
-        };
-      }
-
-      // OTP is valid, but don't clear it yet (will be cleared when creating user)
-      return {
-        success: true,
-        message: 'OTP verified successfully!',
-      };
     } catch (error) {
       return {
         success: false,
@@ -91,17 +63,11 @@ class AuthService {
     try {
       const { mobileNumber, otp, fullName } = formData;
 
-      // First verify OTP
-      const otpVerification = await this.verifyOTP(mobileNumber, otp);
-      if (!otpVerification.success) {
-        return {
-          success: false,
-          message: otpVerification.message,
-        };
-      }
+      // Format phone number for Supabase
+      const formattedPhone = this.formatPhoneNumber(mobileNumber);
 
       // Check if user already exists
-      const existingUser = this.users.find(user => user.mobileNumber === mobileNumber);
+      const existingUser = await supabaseService.getUserByMobile(formattedPhone);
       if (existingUser) {
         return {
           success: false,
@@ -109,23 +75,28 @@ class AuthService {
         };
       }
 
-      // Create new user
-      const newUser: User = {
-        id: `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        fullName,
-        mobileNumber,
-        createdAt: new Date(),
-      };
+      // Create new user using Supabase OTP verification
+      // This will establish the Supabase session
+      const result = await supabaseService.verifyOTP(formattedPhone, otp, fullName);
+      if (!result.success) {
+        return {
+          success: false,
+          message: result.message,
+        };
+      }
 
-      // Add user to storage
-      this.users.push(newUser);
-
-      // Clear OTP after successful user creation
-      this.otpStore.delete(mobileNumber);
+      // Get the created user from Supabase session
+      const createdUser = await supabaseService.getCurrentUser();
+      if (!createdUser) {
+        return {
+          success: false,
+          message: 'User created but failed to retrieve user data.',
+        };
+      }
 
       return {
         success: true,
-        user: newUser,
+        user: createdUser,
         message: 'Account created successfully!',
       };
     } catch (error) {
@@ -138,28 +109,45 @@ class AuthService {
 
   // Get user by ID
   async getUserById(userId: string): Promise<User | null> {
-    return this.users.find(user => user.id === userId) || null;
+    return await supabaseService.getUserById(userId);
   }
 
   // Get user by mobile number
   async getUserByMobile(mobileNumber: string): Promise<User | null> {
-    return this.users.find(user => user.mobileNumber === mobileNumber) || null;
+    return await supabaseService.getUserByMobile(mobileNumber);
   }
 
-  // Clear expired OTPs (cleanup method)
-  cleanupExpiredOTPs(): void {
-    const now = Date.now();
-    for (const [mobileNumber, otpData] of this.otpStore.entries()) {
-      if (now > otpData.expiresAt) {
-        this.otpStore.delete(mobileNumber);
-      }
+  // Get current authenticated user
+  async getCurrentUser(): Promise<User | null> {
+    return await supabaseService.getCurrentUser();
+  }
+
+  /**
+   * Format phone number to include country code
+   * Assumes Indian numbers (+91) by default
+   */
+  private formatPhoneNumber(phoneNumber: string): string {
+    // Remove any existing + or spaces
+    const cleanNumber = phoneNumber.replace(/[\s+\-()]/g, '');
+    
+    // If it already has a country code, return as is
+    if (cleanNumber.startsWith('91') && cleanNumber.length === 12) {
+      return `+${cleanNumber}`;
     }
+    
+    // If it's a 10-digit Indian number, add +91
+    if (cleanNumber.length === 10 && /^[6-9]/.test(cleanNumber)) {
+      return `+91${cleanNumber}`;
+    }
+    
+    // If it's already in international format, return as is
+    if (cleanNumber.startsWith('+')) {
+      return cleanNumber;
+    }
+    
+    // Default: assume it's a 10-digit Indian number
+    return `+91${cleanNumber}`;
   }
 }
 
 export const authService = new AuthService();
-
-// Clean up expired OTPs every minute
-setInterval(() => {
-  authService.cleanupExpiredOTPs();
-}, 60 * 1000);

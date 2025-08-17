@@ -1,6 +1,11 @@
 .App {
-  text-align: center;
+  width: 100%;
   min-height: 100vh;
+}
+
+/* Ensure all major containers can expand to full width */
+.App > * {
+  width: 100%;
 }
 
 .dashboard-placeholder {

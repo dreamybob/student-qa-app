@@ -138,6 +138,76 @@
   border: 1px solid #f5c6cb;
 }
 
+/* Phone display with edit button */
+.phone-display {
+  margin-bottom: 1.5rem;
+}
+
+.phone-display p {
+  margin-bottom: 0.5rem;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.phone-number-with-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #f8f9fa;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e1e8ed;
+  margin-bottom: 1rem;
+}
+
+.phone-number {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.5px;
+}
+
+.edit-phone-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: #3498db;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.edit-phone-btn:hover:not(:disabled) {
+  background: #2980b9;
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.edit-phone-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.edit-phone-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.edit-phone-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}
+
 /* Responsive design */
 @media (max-width: 480px) {
   .signup-form {
@@ -154,5 +224,24 @@
   .btn-secondary {
     width: 100%;
     min-width: auto;
+  }
+
+  .phone-number-with-edit {
+    padding: 0.5rem 0.75rem;
+    gap: 0.4rem;
+  }
+
+  .phone-number {
+    font-size: 1rem;
+  }
+
+  .edit-phone-btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .edit-phone-btn svg {
+    width: 12px;
+    height: 12px;
   }
 }
