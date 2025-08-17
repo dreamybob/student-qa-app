@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { vi, describe, it, expect } from 'vitest';
 import DashboardPage from './DashboardPage';
-import type { User } from '../../types';
+import type { User } from '../types';
 
 const mockUser: User = {
   id: 'user_123',

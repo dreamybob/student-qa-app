@@ -11,8 +11,13 @@ interface StudentDashboardProps {
 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ user, onLogout }) => {
   const [questions, setQuestions] = useState<Question[]>([]);
+  const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<Question['status'] | 'all'>('all');
+  const [subjectFilter, setSubjectFilter] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'date' | 'subject' | 'difficulty'>('date');
   const navigate = useNavigate();
 
   useEffect(() => {
